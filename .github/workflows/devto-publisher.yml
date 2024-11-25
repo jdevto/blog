@@ -4,8 +4,8 @@ on:
   push:
     branches:
       - "**"
-    paths:
-      - "articles/**/*.md"
+    # paths:
+    #   - "articles/**/*.md"
 
 jobs:
   publish:
