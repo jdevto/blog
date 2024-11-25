@@ -1,52 +1,42 @@
 name: markdown-lint
 
 on:
-  workflow_call:
-    inputs:
-      config:
-        type: string
-        required: false
-        default: |
-          {
-            "comment": "Default rules",
-            "default": true,
-            "whitespace": false,
-            "line_length": false,
-            "ul-start-left": false,
-            "ul-indent": false,
-            "no-inline-html": false,
-            "no-bare-urls": false,
-            "fenced-code-language": false,
-            "first-line-h1": false,
-            "no-duplicate-header": false,
-            "no-emphasis-as-header": false,
-            "single-h1": false
-          }
-        description: |
-          a markdownlint compatible JSON object string
-      ignore:
-        type: string
-        required: false
-        default: node_modules
-        description: |
-          a space separated list of directories and files to ignore
+  push:
+    branches:
+      - "**"
+  pull_request:
+    paths:
+      - "**/*.md"
 
 jobs:
   markdown-lint:
     runs-on: ubuntu-latest
     steps:
-      - name: checkout code
+      - name: Checkout code
         uses: actions/checkout@v4
 
-      - id: lint
+      - name: Install markdownlint
+        run: npm install -g markdownlint-cli@0.41.0
+
+      - name: Run markdownlint
         env:
-          CONFIG: ${{ inputs.config }}
+          CONFIG: |
+            {
+              "comment": "Default rules",
+              "default": true,
+              "whitespace": false,
+              "line_length": false,
+              "ul-start-left": false,
+              "ul-indent": false,
+              "no-inline-html": false,
+              "no-bare-urls": false,
+              "fenced-code-language": false,
+              "first-line-h1": false,
+              "no-duplicate-header": false,
+              "no-emphasis-as-header": false,
+              "single-h1": false
+            }
         run: |
-          IGNORE=""
-          for ITEM in ${{ inputs.ignore }}; do
-            IGNORE="$IGNORE --ignore $ITEM"
-          done
           CONFIG_FILE="$(mktemp)"
-          cat <<< "$CONFIG" > "$CONFIG_FILE"
-          npm install -g markdownlint-cli@0.41.0
-          markdownlint '**/*.md' $IGNORE -c "$CONFIG_FILE"
+          echo "$CONFIG" > "$CONFIG_FILE"
+          markdownlint '**/*.md' --ignore node_modules -c "$CONFIG_FILE"
