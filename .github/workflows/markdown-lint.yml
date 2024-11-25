@@ -24,17 +24,17 @@ jobs:
             {
               "comment": "Default rules",
               "default": true,
-              "whitespace": false,
+              "whitespace": true,
               "line_length": false,
-              "ul-start-left": false,
-              "ul-indent": false,
-              "no-inline-html": false,
-              "no-bare-urls": false,
-              "fenced-code-language": false,
-              "first-line-h1": false,
-              "no-duplicate-header": false,
-              "no-emphasis-as-header": false,
-              "single-h1": false
+              "ul-start-left": true,
+              "ul-indent": true,
+              "no-inline-html": true,
+              "no-bare-urls": true,
+              "fenced-code-language": true,
+              "first-line-h1": true,
+              "no-duplicate-header": true,
+              "no-emphasis-as-header": true,
+              "single-h1": true
             }
         run: |
           CONFIG_FILE="$(mktemp)"
