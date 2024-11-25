@@ -15,6 +15,10 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Test Dev.to API
+        run: |
+          curl -H "api-key: ${{ secrets.DEVTO_TOKEN }}" https://dev.to/api/users/me
+
       - name: Set dry-run mode based on branch
         id: dry_run_check
         run: |
