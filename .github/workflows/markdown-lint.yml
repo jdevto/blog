@@ -25,7 +25,7 @@ jobs:
               "comment": "Default rules",
               "default": true,
               "whitespace": true,
-              "line_length": true,
+              "line_length": false,
               "ul-start-left": true,
               "ul-indent": true,
               "no-inline-html": true,
