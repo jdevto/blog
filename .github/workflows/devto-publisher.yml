@@ -1,0 +1,23 @@
+name: Dev.to Publisher
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - articles/**/*.md
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Publish articles to Dev.to
+        uses: sinedied/publish-devto@v2
+        with:
+          devto_key: ${{ secrets.DEVTO_API_KEY }}
+          files: "articles/**/*.md"
+          branch: main
