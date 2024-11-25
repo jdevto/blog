@@ -27,7 +27,7 @@ jobs:
       - name: Publish articles to Dev.to
         uses: sinedied/publish-devto@v2
         with:
-          devto_key: ${{ secrets.DEVTO_API_KEY }}
+          devto_key: ${{ secrets.DEVTO_TOKEN }}
           github_token: ${{ secrets.GITHUB_TOKEN }}
           files: "articles/**/*.md"
           branch: ${{ env.CURRENT_BRANCH }}
