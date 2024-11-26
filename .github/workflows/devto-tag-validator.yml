@@ -2,11 +2,11 @@ name: Dev.to Tag Validator
 
 on:
   push:
-    paths:
-      - "articles/**/*.md"
+    branches:
+      - "**"
   pull_request:
     paths:
-      - "articles/**/*.md"
+      - "**/*.md"
 
 jobs:
   validate-tags:
