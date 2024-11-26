@@ -43,3 +43,6 @@ jobs:
           branch: ${{ env.CURRENT_BRANCH }}
           conventional_commits: true
           dry_run: ${{ env.dry_run }}
+        env:
+          GIT_COMMITTER_NAME: ${{ steps.changed_files.outputs.GIT_COMMITTER_NAME }}
+          GIT_COMMITTER_EMAIL: ${{ steps.changed_files.outputs.GIT_COMMITTER_EMAIL }}
