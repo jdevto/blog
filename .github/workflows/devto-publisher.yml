@@ -15,9 +15,15 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Test Dev.to API
+      - name: Identify changed markdown files
+        id: changed_files
         run: |
-          curl -H "api-key: ${{ secrets.DEVTO_TOKEN }}" https://dev.to/api/users/me
+          # Fetch the list of changed markdown files
+          git diff --name-only "${{ github.event.before }}" "${{ github.sha }}" -- "articles/**/*.md" > changed_files.txt
+          
+          # Create a comma-separated list of files
+          files=$(tr '\n' ',' < changed_files.txt | sed 's/,$//')
+          echo "changed_files=$files" >> $GITHUB_ENV
 
       - name: Set dry-run mode based on branch
         id: dry_run_check
@@ -28,12 +34,12 @@ jobs:
             echo "dry_run=true" >> $GITHUB_ENV
           fi
 
-      - name: Publish articles to Dev.to
+      - name: Publish changed markdown articles to Dev.to
         uses: sinedied/publish-devto@v2
         with:
           devto_key: ${{ secrets.DEVTO_TOKEN }}
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          files: "articles/**/*.md"
+          files: ${{ env.changed_files }}
           branch: ${{ env.CURRENT_BRANCH }}
           conventional_commits: true
           dry_run: ${{ env.dry_run }}
