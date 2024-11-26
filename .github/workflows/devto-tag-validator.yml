@@ -33,36 +33,56 @@ jobs:
 
           # Loop through all Markdown files in the articles directory
           for file in "${ARTICLES_DIR}"/*.md; do
-            if [[ ! -f "$file" ]]; then
+          if [[ ! -f "$file" ]]; then
               echo "No Markdown files found in ${ARTICLES_DIR}. Skipping validation."
               exit 0
-            fi
+          fi
 
-            echo "Checking file: $file"
+          echo "Checking file: $file"
 
-            # Extract YAML frontmatter
-            FRONTMATTER=$(awk '/^---$/ {if (++count <= 2) next} count <= 2 {print}' "$file")
-            if [[ -z "$FRONTMATTER" ]]; then
+          # Extract YAML frontmatter (assuming frontmatter is between --- lines)
+          FRONTMATTER=$(awk '/^---$/ {if (++count <= 2) next} count <= 2 {print}' "$file")
+          if [[ -z "$FRONTMATTER" ]]; then
               echo "[SKIPPED] No frontmatter found in $file"
               continue
-            fi
+          fi
 
-            # Extract tags from frontmatter
-            TAGS=$(echo "$FRONTMATTER" | grep -E '^tags:' | sed -E 's/^tags:[[:space:]]*//;s/,/ /g')
+          # Extract tags from frontmatter in different formats
+          TAGS=$(echo "$FRONTMATTER" | grep -E '^tags:' | sed -E 's/^tags:[[:space:]]*//')
 
-            # Validate each tag
-            for tag in $TAGS; do
+          if [[ -z "$TAGS" ]]; then
+              echo "[SKIPPED] No tags found in frontmatter of $file"
+              continue
+          fi
+
+          # Handle different formats of tags
+          if [[ "$TAGS" =~ ^\[(.*)\]$ ]]; then
+              # Case: Array format (tags: ['github', 'dev.to', ...])
+              TAGS=$(echo "$TAGS" | sed "s/['\[\]]//g" | tr ',' '\n')
+          elif [[ "$TAGS" =~ ^'.*'$ ]]; then
+              # Case: Single-quoted format (tags: 'github, dev.to, ...')
+              TAGS=$(echo "$TAGS" | sed "s/[' ]//g" | tr ',' '\n')
+          else
+              # Case: Comma-separated format (tags: github, dev.to, ...)
+              TAGS=$(echo "$TAGS" | tr ',' '\n')
+          fi
+
+          # Validate each tag
+          for tag in $TAGS; do
+              # Remove leading/trailing quotes before validating
+              tag=$(echo "$tag" | sed "s/^['\"]*//;s/['\"]*$//")
+
               if [[ ! "$tag" =~ $TAG_REGEX ]]; then
-                echo "Whoops, something went wrong:"
-                echo "tag: \"$tag\" in $file contains non-alphanumeric or prohibited characters."
-                VALID=false
+              echo "Whoops, something went wrong:"
+              echo "tag: \"$tag\" in $file contains non-alphanumeric or prohibited characters."
+              VALID=false
               fi
-            done
+          done
           done
 
           if [[ "$VALID" == false ]]; then
-            echo "Validation failed. Please fix invalid tags."
-            exit 1
+          echo "Validation failed. Please fix invalid tags."
+          exit 1
           else
-            echo "All tags are valid!"
+          echo "All tags are valid!"
           fi
