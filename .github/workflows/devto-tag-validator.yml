@@ -4,9 +4,8 @@ on:
   push:
     branches:
       - "**"
-  pull_request:
     paths:
-      - "**/*.md"
+      - "articles/**/*.md"
 
 jobs:
   validate-tags:
