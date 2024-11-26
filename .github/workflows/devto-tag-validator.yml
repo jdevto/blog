@@ -1,0 +1,68 @@
+name: Dev.to Tag Validator
+
+on:
+  push:
+    paths:
+      - "articles/**/*.md"
+  pull_request:
+    paths:
+      - "articles/**/*.md"
+
+jobs:
+  validate-tags:
+    runs-on: ubuntu-latest
+
+    steps:
+      # Checkout the repository
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # Run the tag validation script inline
+      - name: Validate Dev.to tags
+        run: |
+          #!/bin/bash
+          set -euo pipefail
+
+          ARTICLES_DIR="articles"
+          VALID=true
+
+          # Regex for valid tags: Alphanumeric only, disallowing `-` and `_`
+          TAG_REGEX="^[a-zA-Z0-9]+$"
+
+          echo "Validating tags in Markdown files under '${ARTICLES_DIR}'..."
+
+          # Loop through all Markdown files in the articles directory
+          for file in "${ARTICLES_DIR}"/*.md; do
+            if [[ ! -f "$file" ]]; then
+              echo "No Markdown files found in ${ARTICLES_DIR}. Skipping validation."
+              exit 0
+            fi
+
+            echo "Checking file: $file"
+
+            # Extract YAML frontmatter
+            FRONTMATTER=$(awk '/^---$/ {if (++count <= 2) next} count <= 2 {print}' "$file")
+            if [[ -z "$FRONTMATTER" ]]; then
+              echo "[SKIPPED] No frontmatter found in $file"
+              continue
+            fi
+
+            # Extract tags from frontmatter
+            TAGS=$(echo "$FRONTMATTER" | grep -E '^tags:' | sed -E 's/^tags:[[:space:]]*//;s/,/ /g')
+
+            # Validate each tag
+            for tag in $TAGS; do
+              if [[ ! "$tag" =~ $TAG_REGEX ]]; then
+                echo "Whoops, something went wrong:"
+                echo "tag: \"$tag\" in $file contains non-alphanumeric or prohibited characters."
+                VALID=false
+              fi
+            done
+          done
+
+          if [[ "$VALID" == false ]]; then
+            echo "Validation failed. Please fix invalid tags."
+            exit 1
+          else
+            echo "All tags are valid!"
+          fi
