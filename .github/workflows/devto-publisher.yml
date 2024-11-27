@@ -15,44 +15,48 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Get Default Branch
-        id: default_branch
+      - name: Determine Branch Roles
+        id: branch_roles
         run: |
-          # Get the default branch name (e.g., main, master)
-          DEFAULT_BRANCH=${{ github.event.repository.default_branch }}
-          echo "Default branch is: $DEFAULT_BRANCH"
-          echo "default_branch=$DEFAULT_BRANCH" >> $GITHUB_ENV
+          # Determine the source and default branches based on the triggered branch
+          if [[ "${{ github.ref_name }}" == "${{ github.event.repository.default_branch }}" ]]; then
+            echo "source_branch=${{ github.event.repository.default_branch }}" >> $GITHUB_ENV
+            echo "comparison_branch=$(git rev-parse --abbrev-ref HEAD)" >> $GITHUB_ENV
+          else
+            echo "source_branch=$(git rev-parse --abbrev-ref HEAD)" >> $GITHUB_ENV
+            echo "comparison_branch=${{ github.event.repository.default_branch }}" >> $GITHUB_ENV
+          fi
 
-      - name: List Files in Current Branch
-        id: current_branch_files
+      - name: List Files in Source Branch
+        id: source_branch_files
         run: |
-          # List all markdown files in the current branch
-          echo "Listing files in current branch..."
-          git ls-tree -r HEAD --name-only | grep "^articles/.*\.md$" > current_branch_files.txt
-          cat current_branch_files.txt
-          echo "current_branch_files=$(paste -sd, current_branch_files.txt)" >> $GITHUB_ENV
+          # List all markdown files in the source branch
+          echo "Listing files in source branch: ${{ env.source_branch }}..."
+          git ls-tree -r HEAD --name-only | grep "^articles/.*\.md$" > source_branch_files.txt
+          cat source_branch_files.txt
+          echo "source_branch_files=$(paste -sd, source_branch_files.txt)" >> $GITHUB_ENV
 
-      - name: List Files in Default Branch
-        id: default_branch_files
+      - name: List Files in Comparison Branch
+        id: comparison_branch_files
         run: |
-          # Fetch the default branch and list markdown files in it
-          git fetch origin ${{ env.default_branch }}:${{ env.default_branch }}
-          echo "Listing files in default branch: ${{ env.default_branch }}..."
-          git ls-tree -r origin/${{ env.default_branch }} --name-only | grep "^articles/.*\.md$" > default_branch_files.txt
-          cat default_branch_files.txt
-          echo "default_branch_files=$(paste -sd, default_branch_files.txt)" >> $GITHUB_ENV
+          # Fetch the comparison branch and list markdown files in it
+          git fetch origin ${{ env.comparison_branch }}:${{ env.comparison_branch }}
+          echo "Listing files in comparison branch: ${{ env.comparison_branch }}..."
+          git ls-tree -r origin/${{ env.comparison_branch }} --name-only | grep "^articles/.*\.md$" > comparison_branch_files.txt
+          cat comparison_branch_files.txt
+          echo "comparison_branch_files=$(paste -sd, comparison_branch_files.txt)" >> $GITHUB_ENV
 
       - name: Get Diff Between Branches
         id: diff_files
         run: |
-          # Get the files that are in the current branch but not in the default branch
-          echo "Getting the diff between the current and default branches..."
-          current_files=$(cat current_branch_files.txt)
-          default_files=$(cat default_branch_files.txt)
+          # Get the files that are in the source branch but not in the comparison branch
+          echo "Getting the diff between the source and comparison branches..."
+          source_files=$(cat source_branch_files.txt)
+          comparison_files=$(cat comparison_branch_files.txt)
 
           # Compute the diff
-          added_files=$(comm -13 <(echo "$default_files" | sort) <(echo "$current_files" | sort))
-          removed_files=$(comm -23 <(echo "$default_files" | sort) <(echo "$current_files" | sort))
+          added_files=$(comm -13 <(echo "$comparison_files" | sort) <(echo "$source_files" | sort))
+          removed_files=$(comm -23 <(echo "$comparison_files" | sort) <(echo "$source_files" | sort))
 
           echo "Added files: $added_files"
           echo "Removed files: $removed_files"
@@ -68,10 +72,10 @@ jobs:
           echo "added_files=$added_files" >> $GITHUB_ENV
           echo "removed_files=$removed_files" >> $GITHUB_ENV
 
-      - name: Set dry-run mode based on branch
+      - name: Set dry-run mode based on source branch
         id: dry_run_check
         run: |
-          if [[ "${{ github.ref_name }}" == "${{ env.default_branch }}" ]]; then
+          if [[ "${{ env.source_branch }}" == "${{ github.event.repository.default_branch }}" ]]; then
             echo "dry_run=false" >> $GITHUB_ENV
           else
             echo "dry_run=true" >> $GITHUB_ENV
@@ -84,7 +88,7 @@ jobs:
           devto_key: ${{ secrets.DEVTO_TOKEN }}
           github_token: ${{ secrets.GITHUB_TOKEN }}
           files: ${{ env.added_files }}
-          branch: ${{ env.CURRENT_BRANCH }}
+          branch: ${{ env.source_branch }}
           conventional_commits: true
           dry_run: ${{ env.dry_run }}
         env:
