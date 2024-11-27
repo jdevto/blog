@@ -15,34 +15,78 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Identify changed markdown files
-        id: changed_files
+      - name: Get Default Branch
+        id: default_branch
         run: |
-          # Fetch the list of changed markdown files
-          git diff --name-only "${{ github.event.before }}" "${{ github.sha }}" -- "articles/**/*.md" > changed_files.txt
-          
-          # Create a comma-separated list of files
-          files=$(tr '\n' ',' < changed_files.txt | sed 's/,$//')
-          echo "changed_files=$files" >> $GITHUB_ENV
+          # Get the default branch name (e.g., main, master)
+          DEFAULT_BRANCH=${{ github.event.repository.default_branch }}
+          echo "Default branch is: $DEFAULT_BRANCH"
+          echo "default_branch=$DEFAULT_BRANCH" >> $GITHUB_ENV
+
+      - name: List Files in Current Branch
+        id: current_branch_files
+        run: |
+          # List all markdown files in the current branch
+          echo "Listing files in current branch..."
+          git ls-tree -r HEAD --name-only | grep "^articles/.*\.md$" > current_branch_files.txt
+          cat current_branch_files.txt
+          echo "current_branch_files=$(paste -sd, current_branch_files.txt)" >> $GITHUB_ENV
+
+      - name: List Files in Default Branch
+        id: default_branch_files
+        run: |
+          # Fetch the default branch and list markdown files in it
+          git fetch origin ${{ env.default_branch }}:${{ env.default_branch }}
+          echo "Listing files in default branch: ${{ env.default_branch }}..."
+          git ls-tree -r origin/${{ env.default_branch }} --name-only | grep "^articles/.*\.md$" > default_branch_files.txt
+          cat default_branch_files.txt
+          echo "default_branch_files=$(paste -sd, default_branch_files.txt)" >> $GITHUB_ENV
+
+      - name: Get Diff Between Branches
+        id: diff_files
+        run: |
+          # Get the files that are in the current branch but not in the default branch
+          echo "Getting the diff between the current and default branches..."
+          current_files=$(cat current_branch_files.txt)
+          default_files=$(cat default_branch_files.txt)
+
+          # Compute the diff
+          added_files=$(comm -13 <(echo "$default_files" | sort) <(echo "$current_files" | sort))
+          removed_files=$(comm -23 <(echo "$default_files" | sort) <(echo "$current_files" | sort))
+
+          echo "Added files: $added_files"
+          echo "Removed files: $removed_files"
+
+          # Check if there are any differences
+          if [[ -n "$added_files" || -n "$removed_files" ]]; then
+            echo "changed_files=true" >> $GITHUB_ENV
+          else
+            echo "changed_files=false" >> $GITHUB_ENV
+          fi
+
+          # Save the diff files to environment variables for later use
+          echo "added_files=$added_files" >> $GITHUB_ENV
+          echo "removed_files=$removed_files" >> $GITHUB_ENV
 
       - name: Set dry-run mode based on branch
         id: dry_run_check
         run: |
-          if [[ "${{ github.ref_name }}" == "main" ]]; then
+          if [[ "${{ github.ref_name }}" == "${{ env.default_branch }}" ]]; then
             echo "dry_run=false" >> $GITHUB_ENV
           else
             echo "dry_run=true" >> $GITHUB_ENV
           fi
 
       - name: Publish changed markdown articles to Dev.to
+        if: ${{ env.changed_files == 'true' }}
         uses: sinedied/publish-devto@v2
         with:
           devto_key: ${{ secrets.DEVTO_TOKEN }}
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          files: ${{ env.changed_files }}
+          files: ${{ env.added_files }}
           branch: ${{ env.CURRENT_BRANCH }}
           conventional_commits: true
           dry_run: ${{ env.dry_run }}
         env:
-          GIT_COMMITTER_NAME: ${{ steps.changed_files.outputs.GIT_COMMITTER_NAME }}
-          GIT_COMMITTER_EMAIL: ${{ steps.changed_files.outputs.GIT_COMMITTER_EMAIL }}
+          GIT_COMMITTER_NAME: ${{ github.actor }}
+          GIT_COMMITTER_EMAIL: ${{ github.actor }}@users.noreply.github.com
