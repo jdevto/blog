@@ -32,58 +32,58 @@ jobs:
 
           # Loop through all Markdown files in the articles directory
           for file in "${ARTICLES_DIR}"/*.md; do
-          if [[ ! -f "$file" ]]; then
-              echo "No Markdown files found in ${ARTICLES_DIR}. Skipping validation."
-              exit 0
-          fi
+            if [[ ! -f "$file" ]]; then
+                echo "No Markdown files found in ${ARTICLES_DIR}. Skipping validation."
+                exit 0
+            fi
 
-          echo "Checking file: $file"
+            echo "Checking file: $file"
 
-          # Extract YAML frontmatter (assuming frontmatter is between --- lines)
-          FRONTMATTER=$(awk '/^---$/ {if (++count <= 2) next} count <= 2 {print}' "$file")
-          if [[ -z "$FRONTMATTER" ]]; then
-              echo "[SKIPPED] No frontmatter found in $file"
-              continue
-          fi
+            # Extract YAML frontmatter (assuming frontmatter is between --- lines)
+            FRONTMATTER=$(awk '/^---$/ {if (++count <= 2) next} count <= 2 {print}' "$file")
+            if [[ -z "$FRONTMATTER" ]]; then
+                echo "[SKIPPED] No frontmatter found in $file"
+                continue
+            fi
 
-          # Extract tags from frontmatter in different formats
-          TAGS=$(echo "$FRONTMATTER" | grep -E '^tags:' | sed -E 's/^tags:[[:space:]]*//')
+            # Extract tags from frontmatter in different formats
+            TAGS=$(echo "$FRONTMATTER" | grep -E '^tags:' | sed -E 's/^tags:[[:space:]]*//')
 
-          if [[ -z "$TAGS" ]]; then
-              echo "[SKIPPED] No tags found in frontmatter of $file"
-              continue
-          fi
+            if [[ -z "$TAGS" ]]; then
+                echo "[SKIPPED] No tags found in frontmatter of $file"
+                continue
+            fi
 
-          # Handle different formats of tags
-          if [[ "$TAGS" =~ ^\[(.*)\]$ ]]; then
-              # Case: Array format (tags: ['github', 'dev.to', ...])
-              TAGS=$(echo "$TAGS" | sed "s/['\[\]]//g" | tr ',' '\n')
-          elif [[ "$TAGS" =~ ^'.*'$ ]]; then
-              # Case: Single-quoted format (tags: 'github, dev.to, ...')
-              TAGS=$(echo "$TAGS" | sed "s/[' ]//g" | tr ',' '\n')
-          else
-              # Case: Comma-separated format (tags: github, dev.to, ...)
-              TAGS=$(echo "$TAGS" | tr ',' '\n')
-          fi
+            # Handle different formats of tags
+            if [[ "$TAGS" =~ ^\[(.*)\]$ ]]; then
+                # Case: Array format (tags: ['github', 'dev.to', ...])
+                TAGS=$(echo "$TAGS" | sed "s/['\[\]]//g" | tr ',' '\n')
+            elif [[ "$TAGS" =~ ^'.*'$ ]]; then
+                # Case: Single-quoted format (tags: 'github, dev.to, ...')
+                TAGS=$(echo "$TAGS" | sed "s/[' ]//g" | tr ',' '\n')
+            else
+                # Case: Comma-separated format (tags: github, dev.to, ...)
+                TAGS=$(echo "$TAGS" | tr ',' '\n')
+            fi
 
-          # Validate each tag
-          for tag in $TAGS; do
-              # Remove leading/trailing quotes before validating
-              tag=$(echo "$tag" | sed "s/^['\"]*//;s/['\"]*$//")
+            # Validate each tag
+            for tag in $TAGS; do
+                # Remove leading/trailing quotes before validating
+                tag=$(echo "$tag" | sed "s/^['\"]*//;s/['\"]*$//")
 
-              if [[ ! "$tag" =~ $TAG_REGEX ]]; then
-              echo "Whoops, something went wrong:"
-              echo "tag: \"$tag\" in $file contains non-alphanumeric or prohibited characters."
-              VALID=false
-              fi
-          done
+                if [[ ! "$tag" =~ $TAG_REGEX ]]; then
+                    echo "Whoops, something went wrong:"
+                    echo "tag: \"$tag\" in $file contains non-alphanumeric or prohibited characters."
+                    VALID=false
+                fi
+            done
           done
 
           if [[ "$VALID" == false ]]; then
-          echo "Validation failed. Please fix invalid tags."
-          exit 1
+            echo "Validation failed. Please fix invalid tags."
+            exit 1
           else
-          echo "All tags are valid!"
+            echo "All tags are valid!"
           fi
 
   # Job for publishing articles when pushing to main
@@ -109,26 +109,29 @@ jobs:
           PREVIOUS_COMMIT=$(git rev-list --parents -n 1 HEAD | awk '{print $2}')
           echo "Previous commit: $PREVIOUS_COMMIT"
 
-          # List files changed in the merge commit
-          git diff --name-only "$PREVIOUS_COMMIT" HEAD | grep "^articles/.*\.md$" > changed_files.txt
+          # List only added files (using --diff-filter=A to catch only new files)
+          git diff --name-only --diff-filter=A "$PREVIOUS_COMMIT" HEAD | grep "^articles/.*\.md$" > changed_files.txt
 
-          # Print changed files for debugging
+          # Print changed files
           cat changed_files.txt
 
-          # Save the list of changed files as an environment variable
+          # Save the list of changed files as an output variable
           CHANGED_FILES=$(paste -sd, changed_files.txt)
           echo "changed_files=$CHANGED_FILES" >> $GITHUB_ENV
 
-      - name: Show Changed Files
+      - name: Set up matrix
+        id: set_matrix
         run: |
-          echo "Changed files: ${{ env.changed_files }}"
+          # Prepare matrix for matrix strategy
+          CHANGED_FILES=$(paste -sd, changed_files.txt)
+          echo "::set-output name=files::$(echo $CHANGED_FILES | tr ',' '\n')"
 
       - name: Publish changed markdown articles to Dev.to
         uses: sinedied/publish-devto@v2
         with:
           devto_key: ${{ secrets.DEVTO_TOKEN }}
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          files: ${{ env.changed_files }}
+          files: ${{ matrix.file }}  # Each file from the matrix will be processed individually
           branch: ${{ github.ref_name }}
           conventional_commits: true
           dry_run: false
@@ -136,7 +139,9 @@ jobs:
           GIT_COMMITTER_NAME: ${{ github.actor }}
           GIT_COMMITTER_EMAIL: ${{ github.actor }}@users.noreply.github.com
 
-#######################################################################################
+    strategy:
+      matrix:
+        file: ${{ fromJson(steps.set_matrix.outputs.files) }}  # Splits the output into individual files
 
   # Job for validating articles when pushing to feature branches
   validate-article:
