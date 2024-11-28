@@ -141,6 +141,9 @@ jobs:
           devto_key: ${{ secrets.DEVTO_TOKEN }}
           github_token: ${{ secrets.GITHUB_TOKEN }}
           files: ${{ env.changed_files }}
+          branch: ${{ github.ref_name }}
+          conventional_commits: true
+          dry_run: false
         env:
           GIT_COMMITTER_NAME: ${{ github.actor }}
           GIT_COMMITTER_EMAIL: ${{ github.actor }}@users.noreply.github.com
