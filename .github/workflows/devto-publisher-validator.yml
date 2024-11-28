@@ -1,0 +1,88 @@
+name: Dev.to Article Publisher and Validator
+
+on:
+  push:
+    paths:
+      - "articles/**/*.md"
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout the code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Print Debug Information
+        run: |
+          echo "### Environment Variables ###"
+          env
+
+  # Job for publishing articles when pushing to main
+  publish-article:
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' # Ensure this job only runs on the main branch
+
+    steps:
+      - name: Checkout the code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Fetch all history
+        run: |
+          git fetch --all
+
+      - name: Determine Changed Files
+        id: changed_files
+        run: |
+          # Ensure we have access to the previous commit
+          PREVIOUS_COMMIT=$(git rev-list --parents -n 1 HEAD | awk '{print $2}')
+          echo "Previous commit: $PREVIOUS_COMMIT"
+
+          # List files changed in the merge commit
+          git diff --name-only "$PREVIOUS_COMMIT" HEAD > changed_files.txt
+
+          # Print changed files for debugging
+          cat changed_files.txt
+
+          # Save the list of changed files as an environment variable
+          CHANGED_FILES=$(paste -sd, changed_files.txt)
+          echo "changed_files=$CHANGED_FILES" >> $GITHUB_ENV
+
+      - name: Show Changed Files
+        run: |
+          echo "Changed files: ${{ env.changed_files }}"
+
+      - name: Publish changed markdown articles to Dev.to
+        uses: sinedied/publish-devto@v2
+        with:
+          devto_key: ${{ secrets.DEVTO_TOKEN }}
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          files: ${{ env.changed_files }}
+        env:
+          GIT_COMMITTER_NAME: ${{ github.actor }}
+          GIT_COMMITTER_EMAIL: ${{ github.actor }}@users.noreply.github.com
+
+  # Job for validating articles when pushing to feature branches
+  validate-article:
+    runs-on: ubuntu-latest
+    if: github.ref != 'refs/heads/main' # Ensure this job only runs on feature branches
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Validate articles to Dev.to
+        uses: sinedied/publish-devto@v2
+        with:
+          devto_key: ${{ secrets.DEVTO_TOKEN }}
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          files: "articles/**/*.md"
+          branch: ${{ github.ref_name }}
+          conventional_commits: true
+          dry_run: true
+        env:
+          GIT_COMMITTER_NAME: ${{ github.actor }}
+          GIT_COMMITTER_EMAIL: ${{ github.actor }}@users.noreply.github.com
