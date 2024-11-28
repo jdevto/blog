@@ -12,15 +12,18 @@ jobs:
     steps:
       - name: Checkout the code
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # Ensure full history is fetched
 
-      - name: Fetch all history for accurate comparisons
-        run: git fetch --unshallow
+      - name: Fetch all history (if needed)
+        run: |
+          git fetch --all
 
       - name: Determine Changed Files
         id: changed_files
         run: |
-          # Get the previous commit before the merge
-          PREVIOUS_COMMIT=$(git rev-parse HEAD^1)
+          # Ensure we have access to the previous commit
+          PREVIOUS_COMMIT=$(git rev-list --parents -n 1 HEAD | awk '{print $2}')
           echo "Previous commit: $PREVIOUS_COMMIT"
 
           # List files changed in the merge commit
@@ -34,4 +37,5 @@ jobs:
           echo "changed_files=$CHANGED_FILES" >> $GITHUB_ENV
 
       - name: Show Changed Files
-        run: echo "Changed files: ${{ env.changed_files }}"
+        run: |
+          echo "Changed files: ${{ env.changed_files }}"
