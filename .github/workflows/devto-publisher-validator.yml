@@ -115,23 +115,23 @@ jobs:
           # Print changed files
           cat changed_files.txt
 
-          # Save the list of changed files as an output variable
+          # Save the list of changed files as an environment variable
           CHANGED_FILES=$(paste -sd, changed_files.txt)
           echo "changed_files=$CHANGED_FILES" >> $GITHUB_ENV
 
-      - name: Set up matrix
+      - name: Set matrix
         id: set_matrix
         run: |
           # Prepare matrix for matrix strategy
-          CHANGED_FILES=$(paste -sd, changed_files.txt)
-          echo "::set-output name=files::$(echo $CHANGED_FILES | tr ',' '\n')"
+          CHANGED_FILES=$(echo ${{ env.changed_files }} | tr ',' '\n')
+          echo "::set-output name=files::$(echo $CHANGED_FILES)"
 
       - name: Publish changed markdown articles to Dev.to
         uses: sinedied/publish-devto@v2
         with:
           devto_key: ${{ secrets.DEVTO_TOKEN }}
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          files: ${{ matrix.file }}  # Each file from the matrix will be processed individually
+          files: ${{ matrix.files }}  # Each file from the matrix will be processed individually
           branch: ${{ github.ref_name }}
           conventional_commits: true
           dry_run: false
@@ -141,7 +141,7 @@ jobs:
 
     strategy:
       matrix:
-        file: ${{ fromJson(steps.set_matrix.outputs.files) }}  # Splits the output into individual files
+        files: ${{ fromJson(steps.set_matrix.outputs.files) }}  # Splits the output into individual files
 
   # Job for validating articles when pushing to feature branches
   validate-article:
