@@ -6,6 +6,9 @@ on:
       - "**"
     paths:
       - "articles/**/*.md"
+  pull_request:
+    paths:
+      - "articles/**/*.md"
 
 jobs:
   publish:
@@ -14,65 +17,60 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # Fetch full history for accurate comparisons
 
-      - name: Determine Branch Roles
-        id: branch_roles
+      - name: Determine Branch Context
+        id: branch_context
         run: |
-          # Determine the source and default branches based on the triggered branch
-          if [[ "${{ github.ref_name }}" == "${{ github.event.repository.default_branch }}" ]]; then
-            echo "source_branch=${{ github.event.repository.default_branch }}" >> $GITHUB_ENV
-            echo "comparison_branch=$(git rev-parse --abbrev-ref HEAD)" >> $GITHUB_ENV
+          # Detect if the workflow is triggered by a PR or push
+          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            echo "Workflow triggered by a PR."
+            echo "source_branch=${{ github.head_ref }}" >> $GITHUB_ENV
+            echo "comparison_branch=${{ github.base_ref }}" >> $GITHUB_ENV
           else
-            echo "source_branch=$(git rev-parse --abbrev-ref HEAD)" >> $GITHUB_ENV
+            echo "Workflow triggered by a branch commit."
+            echo "source_branch=${{ github.ref_name }}" >> $GITHUB_ENV
             echo "comparison_branch=${{ github.event.repository.default_branch }}" >> $GITHUB_ENV
           fi
 
       - name: List Files in Source Branch
         id: source_branch_files
         run: |
-          # List all markdown files in the source branch
           echo "Listing files in source branch: ${{ env.source_branch }}..."
           git ls-tree -r HEAD --name-only | grep "^articles/.*\.md$" > source_branch_files.txt
-          cat source_branch_files.txt
           echo "source_branch_files=$(paste -sd, source_branch_files.txt)" >> $GITHUB_ENV
 
-      - name: List Files in Comparison Branch
+      - name: Fetch and List Files in Comparison Branch
         id: comparison_branch_files
         run: |
-          # Fetch the comparison branch and list markdown files in it
+          echo "Fetching and listing files in comparison branch: ${{ env.comparison_branch }}..."
           git fetch origin ${{ env.comparison_branch }}:${{ env.comparison_branch }}
-          echo "Listing files in comparison branch: ${{ env.comparison_branch }}..."
-          git ls-tree -r origin/${{ env.comparison_branch }} --name-only | grep "^articles/.*\.md$" > comparison_branch_files.txt
-          cat comparison_branch_files.txt
+          git ls-tree -r ${{ env.comparison_branch }} --name-only | grep "^articles/.*\.md$" > comparison_branch_files.txt
           echo "comparison_branch_files=$(paste -sd, comparison_branch_files.txt)" >> $GITHUB_ENV
 
       - name: Get Diff Between Branches
         id: diff_files
         run: |
-          # Get the files that are in the source branch but not in the comparison branch
-          echo "Getting the diff between the source and comparison branches..."
           source_files=$(cat source_branch_files.txt)
           comparison_files=$(cat comparison_branch_files.txt)
 
-          # Compute the diff
           added_files=$(comm -13 <(echo "$comparison_files" | sort) <(echo "$source_files" | sort))
           removed_files=$(comm -23 <(echo "$comparison_files" | sort) <(echo "$source_files" | sort))
 
           echo "Added files: $added_files"
           echo "Removed files: $removed_files"
 
-          # Check if there are any differences
           if [[ -n "$added_files" || -n "$removed_files" ]]; then
             echo "changed_files=true" >> $GITHUB_ENV
           else
             echo "changed_files=false" >> $GITHUB_ENV
           fi
 
-          # Save the diff files to environment variables for later use
           echo "added_files=$added_files" >> $GITHUB_ENV
           echo "removed_files=$removed_files" >> $GITHUB_ENV
 
-      - name: Set dry-run mode based on source branch
+      - name: Set dry-run mode
         id: dry_run_check
         run: |
           if [[ "${{ env.source_branch }}" == "${{ github.event.repository.default_branch }}" ]]; then
