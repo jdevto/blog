@@ -1,8 +1,10 @@
 ---
-title: "Optimizing AWS Lambda Performance with Node.js: Minimizing Cold Start Latency"
+title: 'Optimizing AWS Lambda Performance with Node.js: Minimizing Cold Start Latency'
 published: true
-description: "Learn how to reduce AWS Lambda cold start times in Node.js applications with best practices, code examples, and a simple keep-alive strategy."
-tags: lambda, nodejs, performance, optimization
+description: 'Learn how to reduce AWS Lambda cold start times in Node.js applications with best practices, code examples, and a simple keep-alive strategy.'
+tags: 'lambda, nodejs, performance, optimization'
+id: 2125119
+date: '2024-11-28T09:16:09Z'
 ---
 
 ## Optimizing AWS Lambda Performance with Node.js: How to Reduce Cold Starts
