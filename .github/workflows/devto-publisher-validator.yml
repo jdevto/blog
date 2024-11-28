@@ -19,10 +19,90 @@ jobs:
           echo "### Environment Variables ###"
           env
 
+#######################################################################################
+
+  # Job for validating articles tags
+  validate-article-tags:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Validate Dev.to articles tags
+        run: |
+          #!/bin/bash
+          set -euo pipefail
+
+          ARTICLES_DIR="articles"
+          VALID=true
+
+          # Regex for valid tags: Alphanumeric only, disallowing `-` and `_`
+          TAG_REGEX="^[a-zA-Z0-9]+$"
+
+          echo "Validating tags in Markdown files under '${ARTICLES_DIR}'..."
+
+          # Loop through all Markdown files in the articles directory
+          for file in "${ARTICLES_DIR}"/*.md; do
+          if [[ ! -f "$file" ]]; then
+              echo "No Markdown files found in ${ARTICLES_DIR}. Skipping validation."
+              exit 0
+          fi
+
+          echo "Checking file: $file"
+
+          # Extract YAML frontmatter (assuming frontmatter is between --- lines)
+          FRONTMATTER=$(awk '/^---$/ {if (++count <= 2) next} count <= 2 {print}' "$file")
+          if [[ -z "$FRONTMATTER" ]]; then
+              echo "[SKIPPED] No frontmatter found in $file"
+              continue
+          fi
+
+          # Extract tags from frontmatter in different formats
+          TAGS=$(echo "$FRONTMATTER" | grep -E '^tags:' | sed -E 's/^tags:[[:space:]]*//')
+
+          if [[ -z "$TAGS" ]]; then
+              echo "[SKIPPED] No tags found in frontmatter of $file"
+              continue
+          fi
+
+          # Handle different formats of tags
+          if [[ "$TAGS" =~ ^\[(.*)\]$ ]]; then
+              # Case: Array format (tags: ['github', 'dev.to', ...])
+              TAGS=$(echo "$TAGS" | sed "s/['\[\]]//g" | tr ',' '\n')
+          elif [[ "$TAGS" =~ ^'.*'$ ]]; then
+              # Case: Single-quoted format (tags: 'github, dev.to, ...')
+              TAGS=$(echo "$TAGS" | sed "s/[' ]//g" | tr ',' '\n')
+          else
+              # Case: Comma-separated format (tags: github, dev.to, ...)
+              TAGS=$(echo "$TAGS" | tr ',' '\n')
+          fi
+
+          # Validate each tag
+          for tag in $TAGS; do
+              # Remove leading/trailing quotes before validating
+              tag=$(echo "$tag" | sed "s/^['\"]*//;s/['\"]*$//")
+
+              if [[ ! "$tag" =~ $TAG_REGEX ]]; then
+              echo "Whoops, something went wrong:"
+              echo "tag: \"$tag\" in $file contains non-alphanumeric or prohibited characters."
+              VALID=false
+              fi
+          done
+          done
+
+          if [[ "$VALID" == false ]]; then
+          echo "Validation failed. Please fix invalid tags."
+          exit 1
+          else
+          echo "All tags are valid!"
+          fi
+
   # Job for publishing articles when pushing to main
   publish-article:
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main' # Ensure this job only runs on the main branch
+    needs: validate-article-tags
 
     steps:
       - name: Checkout the code
@@ -42,7 +122,7 @@ jobs:
           echo "Previous commit: $PREVIOUS_COMMIT"
 
           # List files changed in the merge commit
-          git diff --name-only "$PREVIOUS_COMMIT" HEAD > changed_files.txt
+          git diff --name-only "$PREVIOUS_COMMIT" HEAD | grep "^articles/.*\.md$" > changed_files.txt
 
           # Print changed files for debugging
           cat changed_files.txt
@@ -65,10 +145,13 @@ jobs:
           GIT_COMMITTER_NAME: ${{ github.actor }}
           GIT_COMMITTER_EMAIL: ${{ github.actor }}@users.noreply.github.com
 
+#######################################################################################
+
   # Job for validating articles when pushing to feature branches
   validate-article:
     runs-on: ubuntu-latest
     if: github.ref != 'refs/heads/main' # Ensure this job only runs on feature branches
+    needs: validate-article-tags
 
     steps:
       - name: Checkout code
