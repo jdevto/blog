@@ -134,7 +134,7 @@ jobs:
 
           # List only added files (using --diff-filter=A to catch only new files)
           files=$(git diff --name-only --diff-filter=A "$PREVIOUS_COMMIT" HEAD | grep "^articles/.*\.md$")
-
+          
           # If no files are found, set the variable to an empty JSON array
           if [ -z "$files" ]; then
             files="[]"
