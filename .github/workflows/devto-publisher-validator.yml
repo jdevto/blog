@@ -133,7 +133,7 @@ jobs:
           echo "Previous commit: $PREVIOUS_COMMIT"
 
           # List only added files (using --diff-filter=A to catch only new files)
-          files=$(git diff --name-only --diff-filter=A "$PREVIOUS_COMMIT" HEAD | grep "^articles/.*\.md$" | sort | uniq | jq -R . | jq -s . | jq -cr '@json')
+          files=$(git diff --name-only --diff-filter=A "$PREVIOUS_COMMIT" HEAD | grep '^articles/.*\.md$' | sort | uniq | jq -R . | jq -s . | jq -cr '@json')
 
           # Save the list of changed files as an output variable
           echo "files: $files"
@@ -147,8 +147,6 @@ jobs:
         file: ${{ fromJSON(needs.publish-article-init.outputs.FILES) }}
 
     name: ${{ matrix.file }}
-    if: |
-      needs.publish-article-init.outputs.FILES != '[]'
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -169,3 +167,5 @@ jobs:
         env:
           GIT_COMMITTER_NAME: ${{ github.actor }}
           GIT_COMMITTER_EMAIL: ${{ github.actor }}@users.noreply.github.com
+        if: |
+          needs.publish-article-init.outputs.FILES != '[]'
