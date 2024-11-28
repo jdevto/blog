@@ -153,6 +153,10 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Fetch all history
+        run: |
+          echo ${{ matrix.file }}
+
       - name: Publish changed markdown articles to Dev.to
         uses: sinedied/publish-devto@v2
         with:
