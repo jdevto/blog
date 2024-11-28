@@ -1,37 +1,17 @@
-name: Dev.to Publisher
-
-# on:
-#   push:
-#     branches:
-#       - "**"
-#     paths:
-#       - "articles/**/*.md"
-
-#   pull_request:
-#     branches:
-#       - "**"
-#     paths:
-#       - "articles/**/*.md"
+name: Identify Changed Files
 
 on:
   push:
     branches:
       - main
-      
+
 jobs:
-  publish:
+  list-changed-files:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout code
+      - name: Checkout the code
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 0 # Fetch the full history for comparisons
-
-      - name: Print Debug Information
-        run: |
-          echo "### Environment Variables ###"
-          env
 
       - name: Fetch all history for accurate comparisons
         run: git fetch --unshallow
@@ -55,77 +35,3 @@ jobs:
 
       - name: Show Changed Files
         run: echo "Changed files: ${{ env.changed_files }}"
-
-      # - name: Determine Branch Roles
-      #   id: branch_roles
-      #   run: |
-      #     if [[ "${{ github.event_name }}" == "pull_request" ]]; then
-      #       echo "PR detected."
-      #       echo "source_branch=${{ github.head_ref }}" >> $GITHUB_ENV
-      #       echo "comparison_branch=${{ github.base_ref }}" >> $GITHUB_ENV
-      #     else
-      #       echo "Push to branch detected."
-      #       echo "source_branch=${{ github.ref_name }}" >> $GITHUB_ENV
-      #       echo "comparison_branch=${{ github.event.repository.default_branch }}" >> $GITHUB_ENV
-      #     fi
-
-      # - name: List Files in Source Branch
-      #   id: source_branch_files
-      #   run: |
-      #     echo "Listing files in source branch: ${{ env.source_branch }}..."
-      #     git ls-tree -r HEAD --name-only | grep "^articles/.*\.md$" > source_branch_files.txt
-      #     cat source_branch_files.txt
-      #     echo "source_branch_files=$(paste -sd, source_branch_files.txt)" >> $GITHUB_ENV
-
-      # - name: Fetch and List Files in Comparison Branch
-      #   id: comparison_branch_files
-      #   run: |
-      #     echo "Fetching and listing files in comparison branch: ${{ env.comparison_branch }}..."
-      #     git fetch origin ${{ env.comparison_branch }}:${{ env.comparison_branch }}
-      #     git ls-tree -r ${{ env.comparison_branch }} --name-only | grep "^articles/.*\.md$" > comparison_branch_files.txt
-      #     cat comparison_branch_files.txt
-      #     echo "comparison_branch_files=$(paste -sd, comparison_branch_files.txt)" >> $GITHUB_ENV
-
-      # - name: Get Diff Between Branches
-      #   id: diff_files
-      #   run: |
-      #     source_files=$(cat source_branch_files.txt)
-      #     comparison_files=$(cat comparison_branch_files.txt)
-
-      #     added_files=$(comm -13 <(echo "$comparison_files" | sort) <(echo "$source_files" | sort))
-      #     removed_files=$(comm -23 <(echo "$comparison_files" | sort) <(echo "$source_files" | sort))
-
-      #     echo "Added files: $added_files"
-      #     echo "Removed files: $removed_files"
-
-      #     if [[ -n "$added_files" || -n "$removed_files" ]]; then
-      #       echo "changed_files=true" >> $GITHUB_ENV
-      #     else
-      #       echo "changed_files=false" >> $GITHUB_ENV
-      #     fi
-
-      #     echo "added_files=$added_files" >> $GITHUB_ENV
-      #     echo "removed_files=$removed_files" >> $GITHUB_ENV
-
-      # - name: Set dry-run mode based on source branch
-      #   id: dry_run_check
-      #   run: |
-      #     if [[ "${{ env.source_branch }}" == "${{ github.event.repository.default_branch }}" ]]; then
-      #       echo "dry_run=false" >> $GITHUB_ENV
-      #     else
-      #       echo "dry_run=true" >> $GITHUB_ENV
-      #     fi
-
-      # - name: Publish changed markdown articles to Dev.to
-      #   if: ${{ env.changed_files == 'true' }}
-      #   uses: sinedied/publish-devto@v2
-      #   with:
-      #     devto_key: ${{ secrets.DEVTO_TOKEN }}
-      #     github_token: ${{ secrets.GITHUB_TOKEN }}
-      #     files: ${{ env.added_files }}
-      #     branch: ${{ env.source_branch }}
-      #     conventional_commits: true
-      #     dry_run: ${{ env.dry_run }}
-      #   env:
-      #     GIT_COMMITTER_NAME: ${{ github.actor }}
-      #     GIT_COMMITTER_EMAIL: ${{ github.actor }}@users.noreply.github.com
