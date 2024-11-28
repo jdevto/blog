@@ -86,8 +86,31 @@ jobs:
             echo "All tags are valid!"
           fi
 
+  # Job for validating articles when pushing to feature branches
+  validate-article:
+    runs-on: ubuntu-latest
+    if: github.ref != 'refs/heads/main' # Ensure this job only runs on feature branches
+    needs: validate-article-tags
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Validate articles to Dev.to
+        uses: sinedied/publish-devto@v2
+        with:
+          devto_key: ${{ secrets.DEVTO_TOKEN }}
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          files: "articles/**/*.md"
+          branch: ${{ github.ref_name }}
+          conventional_commits: true
+          dry_run: true
+        env:
+          GIT_COMMITTER_NAME: ${{ github.actor }}
+          GIT_COMMITTER_EMAIL: ${{ github.actor }}@users.noreply.github.com
+
   # Job for publishing articles when pushing to main
-  publish-article:
+  publish-article-init:
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main' # Ensure this job only runs on the main branch
     needs: validate-article-tags
@@ -110,58 +133,35 @@ jobs:
           echo "Previous commit: $PREVIOUS_COMMIT"
 
           # List only added files (using --diff-filter=A to catch only new files)
-          git diff --name-only --diff-filter=A "$PREVIOUS_COMMIT" HEAD | grep "^articles/.*\.md$" > changed_files.txt
+          files=$(git diff --name-only --diff-filter=A "$PREVIOUS_COMMIT" HEAD | grep "^articles/.*\.md$" | jq -R . | jq -s . | jq -cr '@json')
 
-          # Print changed files
-          cat changed_files.txt
+          # Save the list of changed files as an output variable
+          echo "files: $files"
+          echo "FILES=$files" >> "$GITHUB_OUTPUT"
 
-          # Save the list of changed files as an environment variable
-          CHANGED_FILES=$(paste -sd, changed_files.txt)
-          echo "changed_files=$CHANGED_FILES" >> $GITHUB_ENV
+  publish-article:
+    runs-on: ubuntu-latest
+    needs: publish-article-init
+    strategy:
+      matrix:
+        file: ${{ fromJSON(needs.publish-article-init.outputs.FILES) }}
 
-      - name: Set matrix
-        id: set_matrix
-        run: |
-          # Prepare matrix for matrix strategy
-          CHANGED_FILES=$(echo ${{ env.changed_files }} | tr ',' '\n')
-          echo "::set-output name=files::$(echo $CHANGED_FILES)"
+    name: ${{ matrix.file }}
+    if: |
+      needs.publish-article-init.outputs.FILES != '[]'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
 
       - name: Publish changed markdown articles to Dev.to
         uses: sinedied/publish-devto@v2
         with:
           devto_key: ${{ secrets.DEVTO_TOKEN }}
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          files: ${{ matrix.files }}  # Each file from the matrix will be processed individually
+          files: ${{ matrix.file }}  # Each file from the matrix will be processed individually
           branch: ${{ github.ref_name }}
           conventional_commits: true
           dry_run: false
-        env:
-          GIT_COMMITTER_NAME: ${{ github.actor }}
-          GIT_COMMITTER_EMAIL: ${{ github.actor }}@users.noreply.github.com
-
-    strategy:
-      matrix:
-        files: ${{ fromJson(steps.set_matrix.outputs.files) }}  # Splits the output into individual files
-
-  # Job for validating articles when pushing to feature branches
-  validate-article:
-    runs-on: ubuntu-latest
-    if: github.ref != 'refs/heads/main' # Ensure this job only runs on feature branches
-    needs: validate-article-tags
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Validate articles to Dev.to
-        uses: sinedied/publish-devto@v2
-        with:
-          devto_key: ${{ secrets.DEVTO_TOKEN }}
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          files: "articles/**/*.md"
-          branch: ${{ github.ref_name }}
-          conventional_commits: true
-          dry_run: true
         env:
           GIT_COMMITTER_NAME: ${{ github.actor }}
           GIT_COMMITTER_EMAIL: ${{ github.actor }}@users.noreply.github.com
