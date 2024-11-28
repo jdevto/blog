@@ -5,22 +5,10 @@ on:
     paths:
       - "articles/**/*.md"
 
+permissions:
+  contents: write
+
 jobs:
-  test:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout the code
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - name: Print Debug Information
-        run: |
-          echo "### Environment Variables ###"
-          env
-
-#######################################################################################
-
   # Job for validating articles tags
   validate-article-tags:
     runs-on: ubuntu-latest
