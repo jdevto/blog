@@ -133,14 +133,7 @@ jobs:
           echo "Previous commit: $PREVIOUS_COMMIT"
 
           # List only added files (using --diff-filter=A to catch only new files)
-          files=$(git diff --name-only --diff-filter=A "$PREVIOUS_COMMIT" HEAD | grep "^articles/.*\.md$")
-          
-          # If no files are found, set the variable to an empty JSON array
-          if [ -z "$files" ]; then
-            files="[]"
-          else
-            files=$(echo "$files" | jq -R . | jq -s . | jq -cr '@json')
-          fi
+          files=$(git diff --name-only --diff-filter=A "$PREVIOUS_COMMIT" HEAD | grep "^articles/.*\.md$" | jq -R . | jq -s . | jq -cr '@json')
 
           # Save the list of changed files as an output variable
           echo "files: $files"
@@ -165,7 +158,7 @@ jobs:
         with:
           devto_key: ${{ secrets.DEVTO_TOKEN }}
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          files: ${{ matrix.file }} # Each file from the matrix will be processed individually
+          files: ${{ matrix.file }}  # Each file from the matrix will be processed individually
           branch: ${{ github.ref_name }}
           conventional_commits: true
           dry_run: false
