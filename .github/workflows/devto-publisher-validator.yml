@@ -114,6 +114,8 @@ jobs:
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main' # Ensure this job only runs on the main branch
     needs: validate-article-tags
+    outputs:
+      FILES: ${{ steps.get-files.outputs.FILES }}
 
     steps:
       - name: Checkout the code
@@ -126,7 +128,7 @@ jobs:
           git fetch --all
 
       - name: Determine Changed Files
-        id: changed_files
+        id: get-files
         run: |
           # Ensure we have access to the previous commit
           PREVIOUS_COMMIT=$(git rev-list --parents -n 1 HEAD | awk '{print $2}')
