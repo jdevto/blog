@@ -160,12 +160,12 @@ jobs:
         run: |
           echo ${{ matrix.file }}
 
-      - name: Publish changed markdown articles to Dev.to
+      - name: Publish ${{ matrix.file }} article to Dev.to
         uses: sinedied/publish-devto@v2
         with:
           devto_key: ${{ secrets.DEVTO_TOKEN }}
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          files: ${{ matrix.file }}  # Each file from the matrix will be processed individually
+          files: ${{ matrix.file }}
           branch: ${{ github.ref_name }}
           conventional_commits: true
           dry_run: false
