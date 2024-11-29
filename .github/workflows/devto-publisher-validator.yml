@@ -172,19 +172,3 @@ jobs:
         env:
           GIT_COMMITTER_NAME: ${{ github.actor }}
           GIT_COMMITTER_EMAIL: ${{ github.actor }}@users.noreply.github.com
-
-      - name: Get Published Article URL
-        id: get-article-url
-        run: |
-          # Construct the URL manually based on the slug or file name
-          ARTICLE_SLUG=$(basename "${{ matrix.file }}" .md)
-          AUTHOR_USERNAME="jajera" # Replace with your Dev.to username
-          ARTICLE_URL="https://dev.to/${AUTHOR_USERNAME}/${ARTICLE_SLUG}"
-
-          echo "url=${ARTICLE_URL}" >> "$GITHUB_OUTPUT"
-
-      - run: |
-          echo "The article URL is: ${{ steps.get-article-url.outputs.url }}"
-
-      - run: |
-          echo "test"
