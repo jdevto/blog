@@ -41,6 +41,7 @@
                             }
                           }')
             ARTICLE_URL=$(echo $response | jq -r '.article.url')
+            echo $response
             echo "url=${ARTICLE_URL}" >> $GITHUB_OUTPUT
 
         - name: Output article URL
