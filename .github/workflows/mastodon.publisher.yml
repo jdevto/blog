@@ -27,3 +27,22 @@
             echo "Toot ID: ${{ steps.mastodon_toot.outputs.id }}"
             echo "Toot URL: ${{ steps.mastodon_toot.outputs.url }}"
             echo "Scheduled at: ${{ steps.mastodon_toot.outputs.scheduled_at }}"
+
+        - name: Publish article and get URL
+          run: |
+            response=$(curl -X POST "https://dev.to/api/articles" \
+                      -H "Content-Type: application/json" \
+                      -H "api-key: ${{ secrets.DEVTO_TOKEN }}" \
+                      -d '{
+                            "article": {
+                              "title": "test",
+                              "body_markdown": "test",
+                              "published": true
+                            }
+                          }')
+            ARTICLE_URL=$(echo $response | jq -r '.article.url')
+            echo "url=${ARTICLE_URL}" >> $GITHUB_OUTPUT
+
+        - name: Output article URL
+          run: |
+            echo "The article is published at: ${{ steps.publish-article.outputs.url }}"
