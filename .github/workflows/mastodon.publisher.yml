@@ -40,7 +40,7 @@
                               "published": true
                             }
                           }')
-            ARTICLE_URL=$(echo $response | jq -r '.article.url')
+            ARTICLE_URL=$(echo $response | jq -r '.url')
             echo $response
             echo "url=${ARTICLE_URL}" >> $GITHUB_OUTPUT
 
