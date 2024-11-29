@@ -182,3 +182,6 @@ jobs:
           ARTICLE_URL="https://dev.to/${AUTHOR_USERNAME}/${ARTICLE_SLUG}"
 
           echo "url=${ARTICLE_URL}" >> "$GITHUB_OUTPUT"
+
+      - run: |
+          echo "The article URL is: ${{ steps.get-article-url.outputs.url }}"
