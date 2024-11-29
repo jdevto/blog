@@ -185,3 +185,6 @@ jobs:
 
       - run: |
           echo "The article URL is: ${{ steps.get-article-url.outputs.url }}"
+
+      - run: |
+          echo "test"
