@@ -42,9 +42,5 @@
                           }')
             ARTICLE_URL=$(echo $response | jq -r '.url')
             echo $response
-            echo test
+            echo $ARTICLE_URL
             echo "url=${ARTICLE_URL}" >> $GITHUB_OUTPUT
-
-        - name: Output article URL
-          run: |
-            echo "The article is published at: ${{ steps.publish-article.outputs.url }}"
