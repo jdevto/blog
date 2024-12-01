@@ -114,7 +114,8 @@ jobs:
 
       - name: Article Validation Result
         run: |
-          echo "Validation Result: ${{ steps.validate_articles.outputs.result }}"
+          echo "Validation Result: ${{ steps.validate_articles.outputs.result_json }}"
+        continue-on-error: true
 
   # Job for publishing articles when pushing to main
   publish-article:
@@ -142,4 +143,5 @@ jobs:
 
       - name: Article Publishing Result
         run: |
-          echo "Publishing Result: ${{ steps.publish_articles.outputs.result }}"
+          echo "Publishing Result: ${{ steps.publish_articles.outputs.result_json }}"
+        continue-on-error: true
