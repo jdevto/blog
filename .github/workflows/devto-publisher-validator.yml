@@ -2,6 +2,8 @@ name: Dev.to Article Publisher and Validator
 
 on:
   push:
+    branches:
+      - "**"
     paths:
       - "articles/**/*.md"
 
@@ -97,6 +99,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Validate articles to Dev.to
+        id: validate_articles
         uses: sinedied/publish-devto@v2
         with:
           devto_key: ${{ secrets.DEVTO_TOKEN }}
@@ -109,66 +112,34 @@ jobs:
           GIT_COMMITTER_NAME: ${{ github.actor }}
           GIT_COMMITTER_EMAIL: ${{ github.actor }}@users.noreply.github.com
 
+      - name: Article Validation Result
+        run: |
+          echo "Validation Result: ${{ steps.validate_articles.outputs.result }}"
+
   # Job for publishing articles when pushing to main
-  publish-article-init:
+  publish-article:
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main' # Ensure this job only runs on the main branch
     needs: validate-article-tags
-    outputs:
-      FILES: ${{ steps.get-files.outputs.FILES }}
-
-    steps:
-      - name: Checkout the code
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - name: Fetch all history
-        run: |
-          git fetch --all
-
-      - name: Determine Changed Files
-        id: get-files
-        run: |
-          # Ensure we have access to the previous commit
-          PREVIOUS_COMMIT=$(git rev-list --parents -n 1 HEAD | awk '{print $2}')
-          echo "Previous commit: $PREVIOUS_COMMIT"
-
-          # List only added files (using --diff-filter=A to catch only new files)
-          files=$(git diff --name-only --diff-filter=A "$PREVIOUS_COMMIT" HEAD | grep '^articles/.*\.md$' | jq -R . | jq -s . | jq -cr '@json')
-
-          # Save the list of changed files as an output variable
-          echo "files: $files"
-          echo "FILES=$files" >> "$GITHUB_OUTPUT"
-
-  publish-article:
-    runs-on: ubuntu-latest
-    needs: publish-article-init
-    strategy:
-      matrix:
-        file: ${{ fromJSON(needs.publish-article-init.outputs.FILES) }}
-
-    name: ${{ matrix.file }}
-    if: |
-      needs.publish-article-init.outputs.FILES != '[]'
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Fetch all history
-        run: |
-          echo ${{ matrix.file }}
-
-      - name: Publish ${{ matrix.file }} article to Dev.to
+      - name: Publish articles to Dev.to
+        id: publish_articles
         uses: sinedied/publish-devto@v2
         with:
           devto_key: ${{ secrets.DEVTO_TOKEN }}
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          files: ${{ matrix.file }}
+          files: "articles/**/*.md"
           branch: ${{ github.ref_name }}
           conventional_commits: true
           dry_run: false
         env:
           GIT_COMMITTER_NAME: ${{ github.actor }}
           GIT_COMMITTER_EMAIL: ${{ github.actor }}@users.noreply.github.com
+
+      - name: Article Publishing Result
+        run: |
+          echo "Publishing Result: ${{ steps.publish_articles.outputs.result }}"
