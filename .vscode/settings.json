@@ -5,6 +5,7 @@
     "docker-compose*.yml": "yaml",
     "Dockerfile*": "dockerfile"
   },
+  "files.eol": "\n",
   "files.exclude": {
     "**/.git": true,
     "**/.svn": true,
