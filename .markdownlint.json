@@ -1,0 +1,14 @@
+{
+  "default": true,
+  "whitespace": true,
+  "line_length": false,
+  "ul-start-left": true,
+  "ul-indent": true,
+  "no-inline-html": true,
+  "no-bare-urls": true,
+  "fenced-code-language": true,
+  "first-line-h1": true,
+  "no-duplicate-header": true,
+  "no-emphasis-as-header": true,
+  "single-h1": true
+}

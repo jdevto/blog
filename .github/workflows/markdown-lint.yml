@@ -14,28 +14,13 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v6
 
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
       - name: Install markdownlint
         run: npm install -g markdownlint-cli@0.41.0
 
       - name: Run markdownlint
-        env:
-          CONFIG: |
-            {
-              "comment": "Default rules",
-              "default": true,
-              "whitespace": true,
-              "line_length": false,
-              "ul-start-left": true,
-              "ul-indent": true,
-              "no-inline-html": true,
-              "no-bare-urls": true,
-              "fenced-code-language": true,
-              "first-line-h1": true,
-              "no-duplicate-header": true,
-              "no-emphasis-as-header": true,
-              "single-h1": true
-            }
-        run: |
-          CONFIG_FILE="$(mktemp)"
-          echo "$CONFIG" > "$CONFIG_FILE"
-          markdownlint '**/*.md' --ignore node_modules -c "$CONFIG_FILE"
+        run: markdownlint '**/*.md' --ignore node_modules -c .markdownlint.json
