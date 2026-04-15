@@ -1,26 +1,14 @@
-name: Markdown Linter
+name: Markdown Lint
 
 on:
-  push:
-    branches:
-      - "**"
-    paths:
-      - "**/*.md"
+  pull_request: {}
+
+permissions:
+  statuses: write
+  checks: write
+  contents: read
+  pull-requests: read
 
 jobs:
   markdown-lint:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v6
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v6
-        with:
-          node-version: '20'
-
-      - name: Install markdownlint
-        run: npm install -g markdownlint-cli@0.41.0
-
-      - name: Run markdownlint
-        run: markdownlint '**/*.md' --ignore node_modules -c .markdownlint.json
+    uses: actionsforge/actions/.github/workflows/markdown-lint.yml@main
