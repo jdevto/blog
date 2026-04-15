@@ -47,6 +47,12 @@ tags: 'tag1, tag2, tag3'
 - No bare URLs; use `[text](url)`
 - No inline HTML; use markdown
 
+## Diagrams
+
+- **dev.to does not reliably render Mermaid** (and similar diagram-as-code blocks) for all readers. **Do not use Mermaid** in articles unless the platform explicitly supports it later.
+- Prefer **ASCII diagrams** inside a fenced `text` code block, or **markdown-only** structure: **nested lists**, **tables**, or short **numbered flows** in prose.
+- If a diagram would be hard to read in ASCII, split it into **two smaller** figures or replace with a **bullet flow**.
+
 ## Cross-References
 
 When referencing another article, use `[Title](https://dev.to/jajera/slug)`. Update the slug after publish if needed.
